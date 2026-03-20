@@ -1,4 +1,59 @@
-/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+
+// Thème light
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+// Thème dark
+.dark-theme {
+  @include mat.theme((
+    color: (
+      theme-type: dark,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+
+  background-color: #121212;
+  color: #e0e0e0;
+}
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+// Assurer que le dark theme couvre tout
+body.dark-theme {
+  background-color: #121212;
+  color: #e0e0e0;
+
+  .mat-mdc-card,
+  .mat-mdc-dialog-container {
+    background-color: #1e1e1e;
+  }
+
+  .mat-mdc-table {
+    background-color: #1e1e1e;
+  }
+
+  mat-sidenav {
+    background-color: #1e1e1e;
+  }
+
+  mat-sidenav-content {
+    background-color: #121212;
+  }
+
+  .active {
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+}

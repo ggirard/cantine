@@ -40,7 +40,8 @@ import { CentsToDollarsPipe } from '../../shared/pipes/cents-to-euros.pipe';
     }
     .product-image {
       height: 160px;
-      object-fit: cover;
+      object-fit: contain;
+      background: #f5f5f5;
     }
     .placeholder-image {
       height: 160px;

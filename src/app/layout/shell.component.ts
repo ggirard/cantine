@@ -15,6 +15,7 @@ import { map, shareReplay, firstValueFrom } from 'rxjs';
 import { AuthService } from '../core/services/auth.service';
 import { BalanceService } from '../core/services/balance.service';
 import { CartService } from '../core/services/cart.service';
+import { ThemeService } from '../core/services/theme.service';
 import { BalanceChipComponent } from '../shared/components/balance-chip/balance-chip.component';
 import { CartDialogComponent } from '../features/catalogue/cart-dialog.component';
 
@@ -109,6 +110,10 @@ import { CartDialogComponent } from '../features/catalogue/cart-dialog.component
                 <small>{{ user.email }}</small>
               </div>
               <mat-divider></mat-divider>
+              <button mat-menu-item (click)="themeService.toggle()">
+                <mat-icon>{{ (themeService.theme$ | async) === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+                <span>{{ (themeService.theme$ | async) === 'dark' ? 'Mode clair' : 'Mode sombre' }}</span>
+              </button>
               <button mat-menu-item (click)="authService.logout()">
                 <mat-icon>logout</mat-icon>
                 <span>D\u00e9connexion</span>
@@ -156,6 +161,7 @@ import { CartDialogComponent } from '../features/catalogue/cart-dialog.component
 export class ShellComponent {
   authService = inject(AuthService);
   cartService = inject(CartService);
+  themeService = inject(ThemeService);
   private balanceService = inject(BalanceService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
