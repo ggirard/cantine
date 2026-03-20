@@ -1,0 +1,20 @@
+# Dependencies
+/node_modules
+
+# Build
+/dist
+/.angular
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Misc
+.DS_Store
+Thumbs.db
+
+# Environment files
+src/environments/environment.ts
+src/environments/environment.prod.ts
