@@ -1,4 +1,4 @@
-import { Component, inject, ViewChild } from '@angular/core';
+import { Component, inject, ViewChild, signal, DestroyRef } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AsyncPipe } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -11,10 +11,12 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { map, shareReplay, firstValueFrom } from 'rxjs';
+import { map, shareReplay, firstValueFrom, distinctUntilChanged, pairwise, filter, Observable } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../core/services/auth.service';
 import { BalanceService } from '../core/services/balance.service';
 import { CartService } from '../core/services/cart.service';
+import { ProductService } from '../core/services/product.service';
 import { ThemeService } from '../core/services/theme.service';
 import { BalanceChipComponent } from '../shared/components/balance-chip/balance-chip.component';
 import { CartDialogComponent } from '../features/catalogue/cart-dialog.component';
@@ -71,6 +73,14 @@ import { CartDialogComponent } from '../features/catalogue/cart-dialog.component
               <mat-icon matListItemIcon>history</mat-icon>
               <span matListItemTitle>Transactions</span>
             </a>
+            <a mat-list-item routerLink="/admin/propositions" routerLinkActive="active" (click)="closeSidenav()">
+              <mat-icon matListItemIcon
+                [matBadge]="(pendingCount$ | async) || null"
+                matBadgeColor="warn"
+                matBadgeSize="small"
+                [matBadgeHidden]="!(pendingCount$ | async)">pending_actions</mat-icon>
+              <span matListItemTitle>Propositions</span>
+            </a>
           }
         </mat-nav-list>
       </mat-sidenav>
@@ -92,7 +102,10 @@ import { CartDialogComponent } from '../features/catalogue/cart-dialog.component
               [matBadge]="(cartService.itemCount$ | async) || null"
               matBadgeColor="warn"
               matBadgeSize="small"
+              matBadgePosition="below before"
               [matBadgeHidden]="(cartService.itemCount$ | async) === 0"
+              [class.cart-bounce]="cartAnimating()"
+              class="cart-btn"
             >
               <mat-icon>shopping_cart</mat-icon>
             </button>
@@ -156,16 +169,58 @@ import { CartDialogComponent } from '../features/catalogue/cart-dialog.component
     mat-divider {
       margin: 8px 0;
     }
+    .cart-btn {
+      margin-right: 8px;
+    }
+    .cart-btn ::ng-deep .mat-badge-content {
+      font-size: 10px;
+      font-weight: 600;
+      min-width: 18px;
+      height: 18px;
+      line-height: 18px;
+      padding: 0 4px;
+      border-radius: 9px;
+    }
+    @keyframes cartBounce {
+      0%   { transform: scale(1); }
+      25%  { transform: scale(1.45) rotate(-8deg); }
+      50%  { transform: scale(1.3) rotate(8deg); }
+      75%  { transform: scale(1.15) rotate(-4deg); }
+      100% { transform: scale(1); }
+    }
+    .cart-bounce {
+      animation: cartBounce 0.45s ease;
+    }
   `,
 })
 export class ShellComponent {
   authService = inject(AuthService);
   cartService = inject(CartService);
   themeService = inject(ThemeService);
+  private productService = inject(ProductService);
   private balanceService = inject(BalanceService);
+
+  pendingCount$: Observable<number> = this.productService.getPendingSubmissions().pipe(
+    map((proposals) => proposals.length),
+  );
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private breakpointObserver = inject(BreakpointObserver);
+  private destroyRef = inject(DestroyRef);
+
+  cartAnimating = signal(false);
+
+  constructor() {
+    this.cartService.itemCount$.pipe(
+      distinctUntilChanged(),
+      pairwise(),
+      filter(([prev, curr]) => curr > prev),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => {
+      this.cartAnimating.set(true);
+      setTimeout(() => this.cartAnimating.set(false), 450);
+    });
+  }
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
 

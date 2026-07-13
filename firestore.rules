@@ -30,7 +30,15 @@ service cloud.firestore {
     // Products collection
     match /products/{productId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      // Un utilisateur authentifié peut soumettre une proposition (statut pending,
+      // prix 0, non disponible, attribuée à lui-même). Sinon, réservé aux admins.
+      allow create: if isAdmin() ||
+        (isAuthenticated() &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.available == false &&
+          request.resource.data.price == 0 &&
+          request.resource.data.submittedBy == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
 
     // Transactions collection (immutable)

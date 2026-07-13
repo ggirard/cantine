@@ -7,6 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Product } from '../../../core/models';
 import { ProductService } from '../../../core/services/product.service';
 
@@ -100,6 +101,7 @@ export class ProductFormDialogComponent {
   data = inject<ProductFormDialogData>(MAT_DIALOG_DATA);
   private dialogRef = inject(MatDialogRef<ProductFormDialogComponent>);
   private productService = inject(ProductService);
+  private snackBar = inject(MatSnackBar);
 
   uploading = false;
   priceEuros = (this.data.product?.price || 0) / 100;
@@ -112,16 +114,22 @@ export class ProductFormDialogComponent {
   };
 
   async onFileSelected(event: Event): Promise<void> {
-    const file = (event.target as HTMLInputElement).files?.[0];
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
 
     this.uploading = true;
     try {
-      this.form.imageUrl = await this.productService.imageToBase64(file);
+      this.form.imageUrl = await this.productService.processImage(file);
     } catch (error) {
-      console.error('Upload error:', error);
+      this.snackBar.open(
+        error instanceof Error ? error.message : 'Erreur lors du traitement de l\'image.',
+        'OK',
+        { duration: 4000 },
+      );
     } finally {
       this.uploading = false;
+      input.value = '';
     }
   }
 

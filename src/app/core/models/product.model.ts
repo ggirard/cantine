@@ -5,6 +5,10 @@ export interface Product {
   imageUrl: string;
   available: boolean;
   category: string;
+  status?: 'pending' | 'approved';
+  submittedBy?: string;
+  submittedByName?: string;
+  submissionNote?: string;
   createdAt: Date;
   updatedAt: Date;
 }

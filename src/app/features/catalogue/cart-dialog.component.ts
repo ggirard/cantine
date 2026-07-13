@@ -40,13 +40,15 @@ import { CentsToDollarsPipe } from '../../shared/pipes/cents-to-euros.pipe';
             <ng-container matColumnDef="quantity">
               <th mat-header-cell *matHeaderCellDef>Quantit\u00e9</th>
               <td mat-cell *matCellDef="let item">
-                <button mat-icon-button (click)="decrementQuantity(item)" [disabled]="item.quantity <= 1">
-                  <mat-icon>remove</mat-icon>
-                </button>
-                <span class="quantity-value">{{ item.quantity }}</span>
-                <button mat-icon-button (click)="incrementQuantity(item)">
-                  <mat-icon>add</mat-icon>
-                </button>
+                <div class="quantity-control">
+                  <button mat-icon-button (click)="decrementQuantity(item)" [disabled]="item.quantity <= 1">
+                    <mat-icon>remove</mat-icon>
+                  </button>
+                  <span class="quantity-value">{{ item.quantity }}</span>
+                  <button mat-icon-button (click)="incrementQuantity(item)">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
               </td>
             </ng-container>
 
@@ -93,11 +95,22 @@ import { CentsToDollarsPipe } from '../../shared/pipes/cents-to-euros.pipe';
     .cart-table {
       width: 100%;
     }
+    .mat-column-lineTotal {
+      min-width: 90px;
+      white-space: nowrap;
+    }
+    .mat-column-unitPrice {
+      min-width: 90px;
+      white-space: nowrap;
+    }
+    .quantity-control {
+      display: flex;
+      align-items: center;
+    }
     .quantity-value {
-      display: inline-block;
-      min-width: 24px;
+      min-width: 32px;
       text-align: center;
-      font-weight: 500;
+      font-weight: 600;
     }
     .cart-total {
       padding: 16px 0;

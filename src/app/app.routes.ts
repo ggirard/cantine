@@ -62,6 +62,13 @@ export const routes: Routes = [
                 './features/admin/gestion-transactions/admin-historique.component'
               ).then((m) => m.AdminHistoriqueComponent),
           },
+          {
+            path: 'propositions',
+            loadComponent: () =>
+              import(
+                './features/admin/gestion-propositions/proposal-list.component'
+              ).then((m) => m.ProposalListComponent),
+          },
         ],
       },
     ],
