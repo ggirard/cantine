@@ -1,5 +1,6 @@
 rules_version = '2';
 
+// Le serveur MCP (mcp/) passe par le SDK Admin : ces règles ne s'appliquent pas à lui.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -7,33 +8,81 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isAdmin() {
+    // Courriel Google vérifié de la personne connectée
+    function isMyEmail(email) {
+      return isAuthenticated() && request.auth.token.email_verified == true &&
+        email == request.auth.token.email;
+    }
+
+    function myUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Membre = a un doc users/{uid} actif. Un simple compte Google ne suffit pas.
+    function isMember() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        myUser().data.active == true;
+    }
+
+    function isAdmin() {
+      return isMember() && myUser().data.role == 'admin';
     }
 
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() &&
-        (isOwner(userId) || isAdmin());
-      // Admins can delete any user; a user can delete a pre-provisioned doc with their email (migration)
+      function migratesFrom(preId) {
+        let pre = get(/databases/$(database)/documents/users/$(preId));
+        let data = request.resource.data;
+        return preId.matches('pre_.*') &&
+          exists(/databases/$(database)/documents/users/$(preId)) &&
+          isMyEmail(pre.data.email) &&
+          data.email == pre.data.email &&
+          data.role == pre.data.role &&
+          data.balance == pre.data.balance &&
+          data.active == pre.data.active &&
+          data.uid == request.auth.uid;
+      }
+
+      // Son propre doc, ou la recherche du doc pré-provisionné par courriel à la première connexion
+      allow read: if isAdmin() || isOwner(userId) ||
+        isMyEmail(resource.data.email);
+
+      // Pré-provisionnement par un admin
+      allow create: if isAdmin() ||
+        // Migration du doc pré-provisionné vers users/{uid} à la première connexion :
+        // rôle, solde et statut doivent être recopiés tels quels.
+        (isOwner(userId) && request.resource.data.get('migratedFrom', '') is string &&
+          migratesFrom(request.resource.data.get('migratedFrom', '')));
+
+      // Le membre ne touche qu'à son profil Google (à chaque connexion) et, s'il est actif,
+      // ne peut que baisser son solde (achat).
+      allow update: if isAdmin() ||
+        (isOwner(userId) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'photoURL', 'updatedAt'])) ||
+        (isOwner(userId) && resource.data.active == true &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['updatedAt', 'balance']) &&
+          request.resource.data.balance is int &&
+          request.resource.data.balance < resource.data.balance);
+
+      // Un membre ne supprime que son doc pré-provisionné après migration, jamais son doc réel.
       allow delete: if isAdmin() ||
-        (isAuthenticated() && resource.data.email == request.auth.token.email);
+        (!isOwner(userId) && userId.matches('pre_.*') &&
+          isMyEmail(resource.data.email));
+
     }
 
-    // Products collection
     match /products/{productId} {
-      allow read: if isAuthenticated();
-      // Un utilisateur authentifié peut soumettre une proposition (statut pending,
-      // prix 0, non disponible, attribuée à lui-même). Sinon, réservé aux admins.
+      allow read: if isMember();
+      // Un membre peut soumettre une proposition (statut pending, prix 0, non disponible,
+      // attribuée à lui-même). Sinon, réservé aux admins.
       allow create: if isAdmin() ||
-        (isAuthenticated() &&
+        (isMember() &&
           request.resource.data.status == 'pending' &&
           request.resource.data.available == false &&
           request.resource.data.price == 0 &&
@@ -41,12 +90,23 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Transactions collection (immutable)
+    // Immuables
     match /transactions/{transactionId} {
       allow read: if isAuthenticated() &&
         (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
+      // Un membre n'écrit que ses propres achats, dans la même transaction que la baisse de son solde.
+      allow create: if isAdmin() ||
+        (isMember() &&
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.type == 'achat' &&
+          request.resource.data.amount is int &&
+          request.resource.data.amount > 0 &&
+          request.resource.data.balanceAfter ==
+            getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.balance);
       allow update, delete: if false;
     }
+
+    // mcp_oauth_clients et toute autre collection : aucun accès client (SDK Admin seulement)
   }
 }

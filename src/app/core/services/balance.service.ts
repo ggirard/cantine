@@ -92,7 +92,9 @@ export class BalanceService {
       0
     );
 
-    const result = await runTransaction(db, async (transaction) => {
+    // Solde et transactions dans la même transaction Firestore : firestore.rules
+    // n'accepte un achat que si balanceAfter correspond au solde écrit.
+    await runTransaction(db, async (transaction) => {
       const userRef = doc(db, `users/${userId}`);
       const userSnap = await transaction.get(userRef);
       if (!userSnap.exists()) throw new Error('Utilisateur introuvable');
@@ -105,23 +107,21 @@ export class BalanceService {
         updatedAt: new Date(),
       });
 
-      return { newBalance };
+      // One transaction doc per cart item
+      for (const item of items) {
+        transaction.set(doc(collection(db, 'transactions')), {
+          userId,
+          type: 'achat',
+          amount: item.product.price * item.quantity,
+          balanceAfter: newBalance,
+          description: `Achat: ${item.product.name} x${item.quantity}`,
+          productId: item.product.id,
+          quantity: item.quantity,
+          createdBy,
+          createdAt: new Date(),
+        });
+      }
     });
-
-    // Create one transaction doc per cart item
-    for (const item of items) {
-      await addDoc(collection(db, 'transactions'), {
-        userId,
-        type: 'achat',
-        amount: item.product.price * item.quantity,
-        balanceAfter: result.newBalance,
-        description: `Achat: ${item.product.name} x${item.quantity}`,
-        productId: item.product.id,
-        quantity: item.quantity,
-        createdBy,
-        createdAt: new Date(),
-      });
-    }
   }
 
   async manualDebit(

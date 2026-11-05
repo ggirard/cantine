@@ -11,7 +11,6 @@ import {
   query,
   where,
   getDocs,
-  getCountFromServer,
   onSnapshot,
 } from 'firebase/firestore';
 import { Observable, switchMap, map, of, shareReplay, firstValueFrom, filter, BehaviorSubject } from 'rxjs';
@@ -84,6 +83,8 @@ export class AuthService {
         await setDoc(userDocRef, {
           ...preProvData,
           uid,
+          // Exigé par firestore.rules pour vérifier que rôle et solde sont recopiés tels quels
+          migratedFrom: preProvDoc.id,
           displayName: result.user.displayName || preProvData['displayName'] || '',
           photoURL: result.user.photoURL || '',
           updatedAt: new Date(),
@@ -97,25 +98,6 @@ export class AuthService {
       }
     } catch (e) {
       console.warn('Recherche par email échouée:', e);
-    }
-
-    // Premier utilisateur → admin
-    const usersRef = collection(db, 'users');
-    const countSnap = await getCountFromServer(usersRef);
-    if (countSnap.data().count === 0) {
-      const newAdmin: Record<string, unknown> = {
-        uid,
-        email,
-        displayName: result.user.displayName || '',
-        photoURL: result.user.photoURL || '',
-        role: 'admin',
-        balance: 0,
-        active: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      await setDoc(userDocRef, newAdmin);
-      return { uid, ...newAdmin } as unknown as AppUser;
     }
 
     return null;

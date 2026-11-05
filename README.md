@@ -42,6 +42,14 @@ ng build
 
 Déployer `firestore.rules` et `storage.rules` via la console Firebase ou le CLI Firebase.
 
+Avant de déployer `firestore.rules`, lancer ses tests sur l'émulateur (CLI Firebase et Java requis) :
+
+```bash
+cd rules-tests && npm install && npm test
+```
+
+Les règles exigent le champ `migratedFrom` à la première connexion d'un membre pré-provisionné, et l'achat atomique de `BalanceService.purchaseCart`. Il faut donc déployer l'app avant les règles.
+
 ## Fonctionnalités
 
 - **Authentification Google** avec pré-provisionnement par email
