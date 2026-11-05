@@ -1,0 +1,19 @@
+# Stack Portainer « cantine-mcp ». L'image est bâtie sur le serveur :
+#   docker build -t cantine-mcp:latest <repo>/mcp
+services:
+  cantine-mcp:
+    image: cantine-mcp:latest
+    container_name: cantine-mcp
+    restart: unless-stopped
+    # Joignable seulement par Apache sur l'hôte, jamais directement depuis le LAN ou Internet
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      BASE_URL: https://cantine-mcp.gaubey.com
+      FIREBASE_PROJECT_ID: cantine-8c37b
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/firebase-sa.json
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      TOKEN_SECRET: ${TOKEN_SECRET}
+    volumes:
+      - /srv/cantine-mcp/firebase-sa.json:/secrets/firebase-sa.json:ro

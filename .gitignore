@@ -1,8 +1,9 @@
 # Dependencies
-/node_modules
+node_modules/
 
 # Build
 /dist
+mcp/dist/
 /.angular
 
 # IDE
@@ -21,3 +22,9 @@ src/environments/environment.prod.ts
 
 # Firebase deploy cache
 .firebase/
+
+# Serveur MCP : secrets
+mcp/.env
+*-sa.json
+firebase-debug.log
+firestore-debug.log
